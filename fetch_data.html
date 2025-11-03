@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meal Finder</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .controls {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        
+        input, select, button {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        
+        button:hover {
+            background: #0056b3;
+        }
+        
+        .meals-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+        }
+        
+        .meal-card {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .meal-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+        }
+        
+        .meal-info {
+            padding: 15px;
+        }
+        
+        .meal-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .meal-category, .meal-area {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 3px;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+    <div class="controls">
+        <input type="text" id="searchInput" placeholder="Search by name or category...">
+        <select id="sortSelect">
+            <option value="name-asc">Sort by Name (A-Z)</option>
+            <option value="name-desc">Sort by Name (Z-A)</option>
+            <option value="area-asc">Sort by Area (A-Z)</option>
+            <option value="area-desc">Sort by Area (Z-A)</option>
+        </select>
+        <button onclick="fetchMeals()">Refresh Data</button>
+    </div>
+
+    <div id="mealsContainer" class="meals-grid">
+        <div class="loading">Loading meals...</div>
+    </div>
+
+    <script>
+        let meals = [];
+
+        async function fetchMeals() {
+            const container = document.getElementById('mealsContainer');
+            container.innerHTML = '<div class="loading">Loading meals...</div>';
+
+            try {
+                const response = await fetch('https://www.themealdb.com/api/json/v1/1/search.php?f=a');
+                const data = await response.json();
+                meals = data.meals || [];
+                displayMeals(meals);
+            } catch (error) {
+                container.innerHTML = '<div class="loading">Error loading meals</div>';
+            }
+        }
+
+        function displayMeals(mealsToDisplay) {
+            const container = document.getElementById('mealsContainer');
+            
+            if (mealsToDisplay.length === 0) {
+                container.innerHTML = '<div class="loading">No meals found</div>';
+                return;
+            }
+
+            container.innerHTML = mealsToDisplay.map(meal => `
+                <div class="meal-card">
+                    <img src="${meal.strMealThumb}" alt="${meal.strMeal}" class="meal-image">
+                    <div class="meal-info">
+                        <div class="meal-name">${meal.strMeal}</div>
+                        <div class="meal-category">Category: ${meal.strCategory}</div>
+                        <div class="meal-area">Area: ${meal.strArea}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function sortMeals() {
+            const sortValue = document.getElementById('sortSelect').value;
+            let sortedMeals = [...meals];
+
+            switch (sortValue) {
+                case 'name-asc':
+                    sortedMeals.sort((a, b) => a.strMeal.localeCompare(b.strMeal));
+                    break;
+                case 'name-desc':
+                    sortedMeals.sort((a, b) => b.strMeal.localeCompare(a.strMeal));
+                    break;
+                case 'area-asc':
+                    sortedMeals.sort((a, b) => a.strArea.localeCompare(b.strArea));
+                    break;
+                case 'area-desc':
+                    sortedMeals.sort((a, b) => b.strArea.localeCompare(a.strArea));
+                    break;
+            }
+
+            displayMeals(sortedMeals);
+        }
+
+        function filterMeals() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const filteredMeals = meals.filter(meal => 
+                meal.strMeal.toLowerCase().includes(searchTerm) || 
+                meal.strCategory.toLowerCase().includes(searchTerm)
+            );
+            displayMeals(filteredMeals);
+        }
+
+        document.getElementById('sortSelect').addEventListener('change', sortMeals);
+        document.getElementById('searchInput').addEventListener('input', filterMeals);
+
+        fetchMeals();
+    </script>
+</body>
+</html>
