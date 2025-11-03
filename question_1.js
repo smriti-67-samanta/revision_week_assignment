@@ -70,3 +70,5 @@ function test() {
   var a = 20;
 }
 test();
+
+//output=> undefined,undefined
