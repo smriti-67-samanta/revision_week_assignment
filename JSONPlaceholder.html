@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JSONPlaceholder Feed</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #e1e4e8;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        header .subtitle {
+            color: #7f8c8d;
+            font-size: 1.1rem;
+        }
+
+        .controls-panel {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e1e4e8;
+        }
+
+        .search-section {
+            margin-bottom: 25px;
+        }
+
+        .search-box {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .search-box i {
+            color: #6c757d;
+            font-size: 1.2rem;
+        }
+
+        #searchInput {
+            flex: 1;
+            padding: 12px 15px;
+            border: 2px solid #dfe1e5;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        #searchInput:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        .search-modes select {
+            padding: 10px 15px;
+            border: 2px solid #dfe1e5;
+            border-radius: 8px;
+            background: white;
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+
+        .search-info {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+
+        .debounce-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: #28a745;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .transformers-section {
+            margin-bottom: 25px;
+            padding-top: 15px;
+            border-top: 1px solid #eaeaea;
+        }
+
+        .transformers-section h3 {
+            margin-bottom: 15px;
+            color: #2c3e50;
+            font-size: 1.2rem;
+        }
+
+        .transformers-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+
+        .transformer {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            border: 1px solid #e9ecef;
+        }
+
+        .transformer input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .transformer label {
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .user-select {
+            padding: 5px 10px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            margin-left: auto;
+        }
+
+        .pagination-section {
+            padding-top: 15px;
+            border-top: 1px solid #eaeaea;
+        }
+
+        .pagination {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            margin-bottom: 10px;
+        }
+
+        .page-btn {
+            padding: 8px 15px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+            font-size: 0.9rem;
+        }
+
+        .page-btn:hover:not(:disabled) {
+            background: #2980b9;
+        }
+
+        .page-btn:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+        }
+
+        .page-numbers {
+            display: flex;
+            gap: 5px;
+        }
+
+        .page-number {
+            padding: 8px 12px;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .page-number.active {
+            background: #3498db;
+            color: white;
+            border-color: #3498db;
+        }
+
+        .page-info {
+            text-align: center;
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+
+        .feed-container {
+            position: relative;
+            min-height: 400px;
+        }
+
+        .loading, .error, .no-results {
+            text-align: center;
+            padding: 40px;
+            font-size: 1.2rem;
+            color: #6c757d;
+            background: white;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        .error {
+            color: #e74c3c;
+        }
+
+        .no-results {
+            color: #f39c12;
+        }
+
+        .feed {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .post-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+            border: 1px solid #e1e4e8;
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+        }
+
+        .post-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .post-card.long-post {
+            border-left: 4px solid #e74c3c;
+            background-color: #fff9f9;
+        }
+
+        .post-card.hidden-user {
+            opacity: 0.6;
+            background-color: #f8f9fa;
+        }
+
+        .post-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .post-title {
+            font-size: 1.3rem;
+            color: #2c3e50;
+            margin: 0;
+            flex: 1;
+        }
+
+        .post-author {
+            color: #3498db;
+            font-weight: 600;
+            font-size: 0.9rem;
+            white-space: nowrap;
+            margin-left: 15px;
+        }
+
+        .post-body {
+            color: #555;
+            margin-bottom: 15px;
+            line-height: 1.7;
+        }
+
+        .post-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+            font-size: 0.85rem;
+            color: #7f8c8d;
+        }
+
+        .post-comments {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .user-group-header {
+            background: #2c3e50;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin: 20px 0 10px 0;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .detail-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 800px;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            background: none;
+            border: none;
+            font-size: 2rem;
+            color: #7f8c8d;
+            cursor: pointer;
+            line-height: 1;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .close-modal:hover {
+            color: #e74c3c;
+        }
+
+        .modal-header {
+            padding: 25px 25px 15px;
+            border-bottom: 1px solid #eaeaea;
+        }
+
+        .modal-header h2 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .author-info {
+            color: #3498db;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .modal-body {
+            padding: 25px;
+        }
+
+        .post-body {
+            font-size: 1.1rem;
+            line-height: 1.8;
+            margin-bottom: 30px;
+            color: #444;
+        }
+
+        .comments-section h3 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eaeaea;
+        }
+
+        .comment {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-left: 3px solid #3498db;
+        }
+
+        .comment-author {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .comment-body {
+            color: #555;
+            line-height: 1.6;
+        }
+
+        .comment-email {
+            color: #7f8c8d;
+            font-size: 0.85rem;
+            margin-top: 5px;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #e1e4e8;
+            color: #7f8c8d;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+            
+            header h1 {
+                font-size: 2rem;
+            }
+            
+            .transformers-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .search-box {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .search-modes select {
+                width: 100%;
+            }
+            
+            .post-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+            
+            .post-author {
+                margin-left: 0;
+            }
+            
+            .modal-content {
+                max-height: 95vh;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .pagination {
+                flex-wrap: wrap;
+            }
+            
+            .page-numbers {
+                order: 3;
+                width: 100%;
+                justify-content: center;
+                margin-top: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-newspaper"></i> JSONPlaceholder Feed</h1>
+            <p class="subtitle">A smart feed with transformers and search</p>
+        </header>
+
+        <div class="controls-panel">
+            <div class="search-section">
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="searchInput" placeholder="Search posts, authors, or content...">
+                    <div class="search-modes">
+                        <select id="searchMode">
+                            <option value="full">Full Search</option>
+                            <option value="title">Title Only</option>
+                            <option value="fuzzy">Fuzzy Match</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="search-info">
+                    <span id="searchResultsCount">Ready to search</span>
+                    <span class="debounce-indicator" id="debounceIndicator"></span>
+                </div>
+            </div>
+
+            <div class="transformers-section">
+                <h3><i class="fas fa-sliders-h"></i> Feed Transformers</h3>
+                <div class="transformers-grid">
+                    <div class="transformer">
+                        <input type="checkbox" id="transformer1" data-transformer="longPosts">
+                        <label for="transformer1">Highlight Long Posts</label>
+                    </div>
+                    <div class="transformer">
+                        <input type="checkbox" id="transformer2" data-transformer="hideUsers">
+                        <label for="transformer2">Hide Selected Users</label>
+                        <select id="userFilter" class="user-select">
+                            <option value="1">User 1</option>
+                            <option value="2">User 2</option>
+                            <option value="3">User 3</option>
+                        </select>
+                    </div>
+                    <div class="transformer">
+                        <input type="checkbox" id="transformer3" data-transformer="groupByUser">
+                        <label for="transformer3">Group by User</label>
+                    </div>
+                    <div class="transformer">
+                        <input type="checkbox" id="transformer4" data-transformer="sortByComments">
+                        <label for="transformer4">Sort by Comments</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pagination-section">
+                <div class="pagination">
+                    <button id="firstPage" class="page-btn">
+                        <i class="fas fa-angle-double-left"></i>
+                    </button>
+                    <button id="prevPage" class="page-btn">
+                        <i class="fas fa-angle-left"></i>
+                    </button>
+                    <div class="page-numbers" id="pageNumbers"></div>
+                    <button id="nextPage" class="page-btn">
+                        <i class="fas fa-angle-right"></i>
+                    </button>
+                    <button id="lastPage" class="page-btn">
+                        <i class="fas fa-angle-double-right"></i>
+                    </button>
+                </div>
+                <div class="page-info">
+                    Page <span id="currentPage">1</span> of <span id="totalPages">1</span>
+                    • <span id="postCount">0</span> posts
+                </div>
+            </div>
+        </div>
+
+        <div class="feed-container">
+            <div class="loading" id="loading">
+                <i class="fas fa-spinner fa-spin"></i> Loading posts...
+            </div>
+            <div class="error" id="error" style="display: none;">
+                <i class="fas fa-exclamation-triangle"></i> Failed to load posts. Please try again.
+            </div>
+            <div class="no-results" id="noResults" style="display: none;">
+                <i class="fas fa-search"></i> No posts found matching your criteria.
+            </div>
+            <div class="feed" id="feed"></div>
+        </div>
+
+        <div class="detail-modal" id="detailModal">
+            <div class="modal-content">
+                <button class="close-modal" id="closeModal">&times;</button>
+                <div class="modal-header">
+                    <h2 id="modalTitle">Post Details</h2>
+                    <div class="author-info" id="modalAuthor"></div>
+                </div>
+                <div class="modal-body">
+                    <div class="post-body" id="modalBody"></div>
+                    <div class="comments-section">
+                        <h3><i class="fas fa-comments"></i> Comments</h3>
+                        <div class="comments" id="modalComments"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>Powered by JSONPlaceholder API • Posts per page: 10 • <span id="dataStatus">Loading...</span></p>
+        </footer>
+    </div>
+
+    <script>
+        class FeedApp {
+            constructor() {
+                this.posts = [];
+                this.users = [];
+                this.comments = [];
+                this.filteredPosts = [];
+                this.currentPage = 1;
+                this.postsPerPage = 10;
+                this.totalPages = 1;
+                this.searchTerm = '';
+                this.searchMode = 'full';
+                this.debounceTimer = null;
+                this.activeTransformers = new Set();
+                this.userCommentCounts = {};
+                
+                this.init();
+            }
+
+            async init() {
+                this.cacheElements();
+                this.bindEvents();
+                await this.loadInitialData();
+                this.renderPosts();
+            }
+
+            cacheElements() {
+                this.elements = {
+                    feed: document.getElementById('feed'),
+                    loading: document.getElementById('loading'),
+                    error: document.getElementById('error'),
+                    noResults: document.getElementById('noResults'),
+                    searchInput: document.getElementById('searchInput'),
+                    searchMode: document.getElementById('searchMode'),
+                    searchResultsCount: document.getElementById('searchResultsCount'),
+                    debounceIndicator: document.getElementById('debounceIndicator'),
+                    currentPage: document.getElementById('currentPage'),
+                    totalPages: document.getElementById('totalPages'),
+                    postCount: document.getElementById('postCount'),
+                    pageNumbers: document.getElementById('pageNumbers'),
+                    firstPage: document.getElementById('firstPage'),
+                    prevPage: document.getElementById('prevPage'),
+                    nextPage: document.getElementById('nextPage'),
+                    lastPage: document.getElementById('lastPage'),
+                    detailModal: document.getElementById('detailModal'),
+                    closeModal: document.getElementById('closeModal'),
+                    modalTitle: document.getElementById('modalTitle'),
+                    modalAuthor: document.getElementById('modalAuthor'),
+                    modalBody: document.getElementById('modalBody'),
+                    modalComments: document.getElementById('modalComments'),
+                    dataStatus: document.getElementById('dataStatus')
+                };
+            }
+
+            bindEvents() {
+                this.elements.searchInput.addEventListener('input', (e) => this.handleSearch(e));
+                this.elements.searchMode.addEventListener('change', (e) => {
+                    this.searchMode = e.target.value;
+                    this.applyFilters();
+                });
+                
+                document.querySelectorAll('.transformer input[type="checkbox"]').forEach(checkbox => {
+                    checkbox.addEventListener('change', (e) => this.handleTransformerToggle(e));
+                });
+                
+                document.getElementById('userFilter').addEventListener('change', () => this.applyFilters());
+                
+                this.elements.firstPage.addEventListener('click', () => this.goToPage(1));
+                this.elements.prevPage.addEventListener('click', () => this.goToPage(this.currentPage - 1));
+                this.elements.nextPage.addEventListener('click', () => this.goToPage(this.currentPage + 1));
+                this.elements.lastPage.addEventListener('click', () => this.goToPage(this.totalPages));
+                
+                this.elements.closeModal.addEventListener('click', () => this.closeDetailModal());
+                this.elements.detailModal.addEventListener('click', (e) => {
+                    if (e.target === this.elements.detailModal) this.closeDetailModal();
+                });
+                
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape') this.closeDetailModal();
+                });
+            }
+
+            async loadInitialData() {
+                try {
+                    this.elements.dataStatus.textContent = 'Loading data...';
+                    
+                    const [posts, users, comments] = await Promise.all([
+                        this.fetchData('https://jsonplaceholder.typicode.com/posts'),
+                        this.fetchData('https://jsonplaceholder.typicode.com/users'),
+                        this.fetchData('https://jsonplaceholder.typicode.com/comments')
+                    ]);
+                    
+                    this.posts = posts;
+                    this.users = users;
+                    this.comments = comments;
+                    
+                    this.calculateCommentCounts();
+                    this.applyFilters();
+                    
+                    this.elements.loading.style.display = 'none';
+                    this.elements.error.style.display = 'none';
+                    this.elements.dataStatus.textContent = `Loaded ${posts.length} posts, ${users.length} users, ${comments.length} comments`;
+                    
+                } catch (error) {
+                    console.error('Failed to load data:', error);
+                    this.elements.loading.style.display = 'none';
+                    this.elements.error.style.display = 'block';
+                    this.elements.dataStatus.textContent = 'Failed to load data';
+                }
+            }
+
+            async fetchData(url) {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                return await response.json();
+            }
+
+            calculateCommentCounts() {
+                this.userCommentCounts = {};
+                this.comments.forEach(comment => {
+                    const post = this.posts.find(p => p.id === comment.postId);
+                    if (post) {
+                        this.userCommentCounts[post.userId] = (this.userCommentCounts[post.userId] || 0) + 1;
+                    }
+                });
+            }
+
+            handleSearch(event) {
+                this.searchTerm = event.target.value.trim();
+                
+                clearTimeout(this.debounceTimer);
+                this.elements.debounceIndicator.style.backgroundColor = '#ffc107';
+                
+                this.debounceTimer = setTimeout(() => {
+                    this.elements.debounceIndicator.style.backgroundColor = '#28a745';
+                    this.applyFilters();
+                }, 500);
+            }
+
+            handleTransformerToggle(event) {
+                const transformer = event.target.dataset.transformer;
+                
+                if (event.target.checked) {
+                    this.activeTransformers.add(transformer);
+                } else {
+                    this.activeTransformers.delete(transformer);
+                }
+                
+                this.applyFilters();
+            }
+
+            applyFilters() {
+                let result = [...this.posts];
+                
+                if (this.searchTerm) {
+                    result = this.searchPosts(result);
+                }
+                
+                const transformers = Array.from(this.activeTransformers);
+                
+                transformers.forEach(transformer => {
+                    switch(transformer) {
+                        case 'longPosts':
+                            result = this.applyLongPostsTransformer(result);
+                            break;
+                        case 'hideUsers':
+                            const selectedUserId = parseInt(document.getElementById('userFilter').value);
+                            result = this.applyHideUsersTransformer(result, selectedUserId);
+                            break;
+                        case 'groupByUser':
+                            result = this.applyGroupByUserTransformer(result);
+                            break;
+                        case 'sortByComments':
+                            result = this.applySortByCommentsTransformer(result);
+                            break;
+                    }
+                });
+                
+                this.filteredPosts = result;
+                this.updatePagination();
+                this.renderPosts();
+            }
+
+            searchPosts(posts) {
+                return posts.filter(post => {
+                    const user = this.users.find(u => u.id === post.userId);
+                    const userName = user ? user.name.toLowerCase() : '';
+                    const title = post.title.toLowerCase();
+                    const body = post.body.toLowerCase();
+                    const searchTerm = this.searchTerm.toLowerCase();
+                    
+                    switch(this.searchMode) {
+                        case 'title':
+                            return title.includes(searchTerm);
+                        case 'fuzzy':
+                            return this.fuzzyMatch(title, searchTerm) || this.fuzzyMatch(body, searchTerm);
+                        default:
+                            return title.includes(searchTerm) || 
+                                   body.includes(searchTerm) || 
+                                   userName.includes(searchTerm);
+                    }
+                });
+            }
+
+            fuzzyMatch(str, pattern) {
+                pattern = pattern.toLowerCase();
+                let patternIndex = 0;
+                
+                for (let i = 0; i < str.length; i++) {
+                    if (str[i].toLowerCase() === pattern[patternIndex]) {
+                        patternIndex++;
+                        if (patternIndex === pattern.length) return true;
+                    }
+                }
+                
+                return false;
+            }
+
+            applyLongPostsTransformer(posts) {
+                return posts.map(post => ({
+                    ...post,
+                    isLong: post.body.length > 150
+                }));
+            }
+
+            applyHideUsersTransformer(posts, userId) {
+                return posts.filter(post => post.userId !== userId);
+            }
+
+            applyGroupByUserTransformer(posts) {
+                const grouped = [];
+                const userGroups = {};
+                
+                posts.forEach(post => {
+                    if (!userGroups[post.userId]) {
+                        userGroups[post.userId] = [];
+                    }
+                    userGroups[post.userId].push(post);
+                });
+                
+                Object.entries(userGroups).forEach(([userId, userPosts]) => {
+                    const user = this.users.find(u => u.id === parseInt(userId));
+                    if (user) {
+                        grouped.push({ type: 'userHeader', userId: user.id, userName: user.name });
+                        grouped.push(...userPosts);
+                    }
+                });
+                
+                return grouped;
+            }
+
+            applySortByCommentsTransformer(posts) {
+                return [...posts].sort((a, b) => {
+                    const countA = this.userCommentCounts[a.userId] || 0;
+                    const countB = this.userCommentCounts[b.userId] || 0;
+                    return countB - countA;
+                });
+            }
+
+            updatePagination() {
+                this.totalPages = Math.max(1, Math.ceil(this.filteredPosts.length / this.postsPerPage));
+                this.currentPage = Math.min(this.currentPage, this.totalPages);
+                
+                this.elements.currentPage.textContent = this.currentPage;
+                this.elements.totalPages.textContent = this.totalPages;
+                this.elements.postCount.textContent = this.filteredPosts.length;
+                
+                this.elements.firstPage.disabled = this.currentPage === 1;
+                this.elements.prevPage.disabled = this.currentPage === 1;
+                this.elements.nextPage.disabled = this.currentPage === this.totalPages;
+                this.elements.lastPage.disabled = this.currentPage === this.totalPages;
+                
+                this.renderPageNumbers();
+                
+                const searchText = this.searchTerm ? `"${this.searchTerm}" • ` : '';
+                const transformerText = this.activeTransformers.size > 0 ? `• ${this.activeTransformers.size} active transformers` : '';
+                this.elements.searchResultsCount.textContent = 
+                    `${searchText}${this.filteredPosts.length} posts ${transformerText}`;
+            }
+
+            renderPageNumbers() {
+                this.elements.pageNumbers.innerHTML = '';
+                
+                let startPage = Math.max(1, this.currentPage - 2);
+                let endPage = Math.min(this.totalPages, startPage + 4);
+                
+                if (endPage - startPage < 4) {
+                    startPage = Math.max(1, endPage - 4);
+                }
+                
+                for (let i = startPage; i <= endPage; i++) {
+                    const pageBtn = document.createElement('button');
+                    pageBtn.className = `page-number ${i === this.currentPage ? 'active' : ''}`;
+                    pageBtn.textContent = i;
+                    pageBtn.addEventListener('click', () => this.goToPage(i));
+                    this.elements.pageNumbers.appendChild(pageBtn);
+                }
+            }
+
+            goToPage(page) {
+                if (page < 1 || page > this.totalPages || page === this.currentPage) return;
+                
+                this.currentPage = page;
+                this.renderPosts();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+
+            renderPosts() {
+                this.elements.feed.innerHTML = '';
+                
+                if (this.filteredPosts.length === 0) {
+                    this.elements.noResults.style.display = 'block';
+                    return;
+                }
+                
+                this.elements.noResults.style.display = 'none';
+                
+                const startIndex = (this.currentPage - 1) * this.postsPerPage;
+                const endIndex = startIndex + this.postsPerPage;
+                const pagePosts = this.filteredPosts.slice(startIndex, endIndex);
+                
+                pagePosts.forEach(item => {
+                    if (item.type === 'userHeader') {
+                        this.renderUserHeader(item);
+                    } else {
+                        this.renderPostCard(item);
+                    }
+                });
+            }
+
+            renderUserHeader(userData) {
+                const user = this.users.find(u => u.id === userData.userId);
+                if (!user) return;
+                
+                const header = document.createElement('div');
+                header.className = 'user-group-header';
+                header.innerHTML = `
+                    <i class="fas fa-user"></i>
+                    <span>Posts by ${user.name}</span>
+                    <span class="comment-count">(${this.userCommentCounts[user.id] || 0} comments)</span>
+                `;
+                this.elements.feed.appendChild(header);
+            }
+
+            renderPostCard(post) {
+                const user = this.users.find(u => u.id === post.userId);
+                const card = document.createElement('div');
+                
+                card.className = 'post-card';
+                if (post.isLong) card.classList.add('long-post');
+                
+                const commentCount = this.comments.filter(c => c.postId === post.id).length;
+                
+                card.innerHTML = `
+                    <div class="post-header">
+                        <h3 class="post-title">${post.title}</h3>
+                        <div class="post-author">${user ? user.name : 'Unknown'}</div>
+                    </div>
+                    <div class="post-body">
+                        ${post.body.length > 200 ? post.body.substring(0, 200) + '...' : post.body}
+                    </div>
+                    <div class="post-footer">
+                        <div class="post-comments">
+                            <i class="fas fa-comment"></i>
+                            <span>${commentCount} comments</span>
+                        </div>
+                        <div class="post-id">Post #${post.id}</div>
+                    </div>
+                `;
+                
+                card.addEventListener('click', () => this.showPostDetail(post));
+                this.elements.feed.appendChild(card);
+            }
+
+            async showPostDetail(post) {
+                try {
+                    const [user, postComments] = await Promise.all([
+                        this.users.find(u => u.id === post.userId) || { name: 'Unknown', email: 'N/A' },
+                        this.comments.filter(c => c.postId === post.id)
+                    ]);
+                    
+                    this.elements.modalTitle.textContent = post.title;
+                    this.elements.modalAuthor.textContent = `${user.name} (${user.email})`;
+                    this.elements.modalBody.textContent = post.body;
+                    
+                    this.elements.modalComments.innerHTML = '';
+                    
+                    if (postComments.length === 0) {
+                        this.elements.modalComments.innerHTML = '<p class="no-comments">No comments yet.</p>';
+                    } else {
+                        postComments.forEach(comment => {
+                            const commentEl = document.createElement('div');
+                            commentEl.className = 'comment';
+                            commentEl.innerHTML = `
+                                <div class="comment-author">
+                                    <i class="fas fa-user-circle"></i>
+                                    ${comment.name}
+                                </div>
+                                <div class="comment-body">${comment.body}</div>
+                                <div class="comment-email">${comment.email}</div>
+                            `;
+                            this.elements.modalComments.appendChild(commentEl);
+                        });
+                    }
+                    
+                    this.elements.detailModal.style.display = 'flex';
+                } catch (error) {
+                    console.error('Error loading post details:', error);
+                }
+            }
+
+            closeDetailModal() {
+                this.elements.detailModal.style.display = 'none';
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            new FeedApp();
+        });
+    </script>
+</body>
+</html>
